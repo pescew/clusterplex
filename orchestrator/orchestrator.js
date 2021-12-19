@@ -15,7 +15,7 @@ const WORKER_SELECTION_STRATEGY = process.env.WORKER_SELECTION_STRATEGY || WORKE
 const metrics = require('./metrics')
 
 class Worker {
-    constructor(id, socketId, host) {
+    constructor(id, socketId, host, mediaRestrictions) {
         this.id = id
         this.socketId = socketId
         this.host = host
@@ -23,6 +23,7 @@ class Worker {
         this.stats = { cpu: 0, tasks: 0, ops: 0, rank: 0 }
         this.activeTaskCount = 0
         this.usageCounter = 0
+        this.mediaRestrictions = mediaRestrictions
     }
 
     onTaskAssigned() {
@@ -47,6 +48,19 @@ class Worker {
         metrics.setWorkerLoadTasks(this.host, this.stats.tasks)
         metrics.setWorkerLoadOps(this.host, this.stats.ops)
         metrics.setWorkerLoadRank(this.host, this.stats.rank)
+    }
+
+    mediaSupported(mediaInfo) {
+        if (this.mediaRestrictions.unsupportedCodecs.includes(mediaInfo.videoCodec)) {
+			return false
+		} else if (this.mediaRestrictions.unsupportedCodecs.includes(mediaInfo.audioCodec)) {
+			return false
+		} else if (mediaInfo.videoWidth > this.mediaRestrictions.maxVideoWidth && this.mediaRestrictions.maxVideoWidth != 0) {
+			return false
+		} else if (mediaInfo.videoHeight > this.mediaRestrictions.maxVideoHeight && this.mediaRestrictions.maxVideoHeight != 0) {
+			return false
+		}
+        return true
     }
 }
 
@@ -87,11 +101,11 @@ class WorkerSet {
         return null
     }
 
-    getNextAvailableWorker() {
+    getNextAvailableWorker(mediaInfo) {
         if (this.workers.size == 0) {
             return null
         }
-        return this.workerSelectionStrategy(); 
+        return this.workerSelectionStrategy(mediaInfo);
     }
 
     updateStats(socketId, stats) {
@@ -124,14 +138,14 @@ class WorkerSet {
         }
     }
 
-    roundRobinSelector() {
-        let currentWorkers = Array.from(this.workers.values())
+    roundRobinSelector(mediaInfo) {
+        let currentWorkers = Array.from(this.workers.values()).filter(wkr => wkr.mediaSupported(mediaInfo));
         this.roundRobinIndex = (this.roundRobinIndex + 1) % currentWorkers.length
         return currentWorkers[this.roundRobinIndex]
     }
 
-    loadBasedSelector() {
-        let currentWorkers = Array.from(this.workers.values())
+    loadBasedSelector(mediaInfo) {
+        let currentWorkers = Array.from(this.workers.values()).filter(wkr => wkr.mediaSupported(mediaInfo));
         if (currentWorkers.length > 0) {
             return currentWorkers.reduce((a,b) => a.stats.cpu < b.stats.cpu ? a : b)
         } else {
@@ -139,8 +153,8 @@ class WorkerSet {
         }
     }
 
-    taskLoadBasedSelector() {
-        let currentWorkers = Array.from(this.workers.values())
+    taskLoadBasedSelector(mediaInfo) {
+        let currentWorkers = Array.from(this.workers.values()).filter(wkr => wkr.mediaSupported(mediaInfo));
         if (currentWorkers.length > 0) {
             return currentWorkers.reduce((a,b) => a.stats.tasks < b.stats.tasks ? a : b)
         } else {
@@ -148,8 +162,8 @@ class WorkerSet {
         }
     }
 
-    rankedSelector() {
-        let currentWorkers = Array.from(this.workers.values())
+    rankedSelector(mediaInfo) {
+        let currentWorkers = Array.from(this.workers.values()).filter(wkr => wkr.mediaSupported(mediaInfo));
         if (currentWorkers.length > 0) {
             return currentWorkers.reduce((a,b) => a.stats.rank > b.stats.rank ? a : b)
         } else {
@@ -376,7 +390,7 @@ module.exports.init = (server) => {
     let taskBuilder = getTaskBuilderStrategy(STREAM_SPLITTING);
 
     function runTask(task) {
-        let worker = workers.getNextAvailableWorker()
+        let worker = workers.getNextAvailableWorker(task.payload.mediaInfo)
         if (worker) {
             console.log(`Forwarding work request to ${worker.name}`)
             task.assignTo(worker)
@@ -533,7 +547,7 @@ module.exports.init = (server) => {
         })
 
         socket.on('worker.announce', data => {
-            const worker = new Worker(data.workerId, socket.id, data.host);
+            const worker = new Worker(data.workerId, socket.id, data.host, data.mediaRestrictions);
             workers.register(worker)
             disconnectionHandlers.set(socket.id, workerDisconnectionHandler)
             console.log(`Registered new worker: ${worker.name}`)
