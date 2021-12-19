@@ -52,14 +52,14 @@ class Worker {
 
     mediaSupported(mediaInfo) {
         if (this.mediaRestrictions.unsupportedCodecs.includes(mediaInfo.videoCodec)) {
-			return false
-		} else if (this.mediaRestrictions.unsupportedCodecs.includes(mediaInfo.audioCodec)) {
-			return false
-		} else if (mediaInfo.videoWidth > this.mediaRestrictions.maxVideoWidth && this.mediaRestrictions.maxVideoWidth != 0) {
-			return false
-		} else if (mediaInfo.videoHeight > this.mediaRestrictions.maxVideoHeight && this.mediaRestrictions.maxVideoHeight != 0) {
-			return false
-		}
+            return false
+        } else if (this.mediaRestrictions.unsupportedCodecs.includes(mediaInfo.audioCodec)) {
+            return false
+        } else if (mediaInfo.videoWidth > this.mediaRestrictions.maxVideoWidth && this.mediaRestrictions.maxVideoWidth != 0) {
+            return false
+        } else if (mediaInfo.videoHeight > this.mediaRestrictions.maxVideoHeight && this.mediaRestrictions.maxVideoHeight != 0) {
+            return false
+        }
         return true
     }
 }
