@@ -354,3 +354,6 @@ The image extends the [LinuxServer Plex](https://hub.docker.com/r/linuxserver/pl
 | `ORCHESTRATOR_URL` | The url where the orchestrator service can be reached (ex: http://plex-orchestrator:3500) |
 | `TRANSCODER_PATH` | Default = '/usr/lib/plexmediaserver/' |
 | `TRANSCODER_NAME` | Default = 'Plex Transcoder' |
+| `UNSUPPORTED_CODECS` | Comma separated list of video and/or audio codecs that will never be assigned to this worker (ex: hevc, mpeg4, ac3) |
+| `MAX_VIDEO_HEIGHT` | Maximum video height that will be assigned to this worker (ex: 1080) |
+| `MAX_VIDEO_WIDTH` | Maximum video width that will be assigned to this worker (ex: 1920) |
