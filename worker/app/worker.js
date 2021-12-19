@@ -6,6 +6,10 @@ const TRANSCODER_PATH = process.env.TRANSCODER_PATH || '/usr/lib/plexmediaserver
 const TRANSCODER_NAME = process.env.TRANSCODER_NAME || 'Plex Transcoder'
 // hwaccel decoder: https://trac.ffmpeg.org/wiki/HWAccelIntro
 const FFMPEG_HWACCEL = process.env.FFMPEG_HWACCEL || false
+// worker media restrictions:
+const UNSUPPORTED_CODECS = process.env.UNSUPPORTED_CODECS || ''
+const MAX_VIDEO_HEIGHT = process.env.MAX_VIDEO_HEIGHT || 0
+const MAX_VIDEO_WIDTH = process.env.MAX_VIDEO_WIDTH || 0
 
 var app = require('express')();
 var server = require('http').createServer(app);
@@ -55,7 +59,12 @@ socket.on('connect', () => {
     socket.emit('worker.announce', 
     {
         workerId: workerId,
-        host: process.env.HOSTNAME
+        host: process.env.HOSTNAME,
+        mediaRestrictions: {
+            'unsupportedCodecs': UNSUPPORTED_CODECS.toLowerCase().split(",").map(item=>item.trim()),
+            'maxVideoHeight': MAX_VIDEO_HEIGHT,
+            'maxVideoWidth': MAX_VIDEO_WIDTH
+        }
     })
 })
 
